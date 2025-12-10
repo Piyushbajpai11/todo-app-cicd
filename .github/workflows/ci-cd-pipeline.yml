@@ -102,19 +102,25 @@ jobs:
         IMAGE_TAG: ${{ steps.meta.outputs.SHORT_SHA }}
         VERSION: ${{ steps.meta.outputs.VERSION }}
       run: |
+        # Configure git credentials
+        git config --global credential.helper store
+        echo "https://x-access-token:$GITOPS_TOKEN@github.com" > ~/.git-credentials
+        
         # Clone GitOps repo
-        git clone https://$GITOPS_TOKEN@github.com/$GITOPS_REPO.git gitops
+        git clone https://github.com/$GITOPS_REPO.git gitops
         cd gitops
+        
+        # Configure git user
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         
         # Update dev values with new image tag
         sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" helm-charts/todo-app/values-dev.yaml
         
         # Commit and push
-        git config user.name "GitHub Actions"
-        git config user.email "actions@github.com"
         git add helm-charts/todo-app/values-dev.yaml
         git commit -m "🚀 Update dev image to $VERSION ($IMAGE_TAG)" || echo "No changes to commit"
-        git push
+        git push https://x-access-token:$GITOPS_TOKEN@github.com/$GITOPS_REPO.git main
         
         echo "✅ GitOps repo updated - ArgoCD will auto-sync dev environment"
 
