@@ -30,35 +30,42 @@ Application code lives in this repo, while Kubernetes configuration and environm
 ## 🏗️ Architecture
 
 flowchart TD
-  %% Developer workflow
-  Dev[Developer<br/>Workflow] -->|git push to main| CI[GitHub Actions<br/>(CI/CD)]
+%% Developer workflow
 
-  subgraph GitHub_Actions["GitHub Actions Pipeline"]
+Dev[Developer Workflow] -->|git push to main| CI[GitHub Actions(CI/CD)]
+
+%% GitHub Actions pipeline
+subgraph GitHub_Actions["GitHub Actions Pipeline"]
+    direction TB
     B[Build Docker Image] --> S[Trivy Security Scan]
     S --> P[Push Image to AWS ECR]
-    P --> G[Update GitOps Repository<br/>(todo-app-gitops)]
-  end
+    P --> G[Update GitOps Repository\ntodo-app-gitops]
+end
 
-  CI --> GitHub_Actions
-  GitHub_Actions --> GR[GitOps Repository<br/>(Helm charts + values)]
+CI --> B
 
-  GR -->|ArgoCD watches repo| Argo[ArgoCD]
+G --> GR[GitOps Repository\nHelm charts + values]
 
-  subgraph EKS["AWS EKS Cluster"]
+GR -->|ArgoCD watches repo| Argo[ArgoCD]
+
+%% EKS cluster and namespaces
+subgraph EKS["AWS EKS Cluster"]
     subgraph DevNS["dev namespace"]
-      DevApp[Todo App<br/>(1 pod, ClusterIP)]
+        DevApp[Todo App\n1 pod, ClusterIP]
     end
+    
     subgraph StagingNS["staging namespace"]
-      StgApp[Todo App<br/>(2 pods, LoadBalancer)]
+        StgApp[Todo App\n2 pods, LoadBalancer]
     end
+    
     subgraph ProdNS["prod namespace"]
-      ProdApp[Todo App<br/>(3+ pods, LoadBalancer)]
+        ProdApp[Todo App\n3+ pods, LoadBalancer]
     end
-  end
+end
 
-  Argo -->|Auto-sync| DevNS
-  Argo -->|Auto-sync| StagingNS
-  Argo -->|Manual sync| ProdNS
+Argo -->|Auto-sync| DevNS
+Argo -->|Auto-sync| StagingNS
+Argo -->|Manual sync| ProdNS
 
 
 text
