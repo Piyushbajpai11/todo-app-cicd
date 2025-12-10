@@ -29,50 +29,50 @@ Application code lives in this repo, while Kubernetes configuration and environm
 
 ## 🏗️ Architecture
 
-flowchart TD
-%% Developer workflow
-
-Dev[Developer Workflow] -->|git push to main| CI[GitHub Actions(CI/CD)]
-
-%% GitHub Actions pipeline
-subgraph GitHub_Actions["GitHub Actions Pipeline"]
-    direction TB
-    B[Build Docker Image] --> S[Trivy Security Scan]
-    S --> P[Push Image to AWS ECR]
-    P --> G[Update GitOps Repository\ntodo-app-gitops]
-end
-
-CI --> B
-
-G --> GR[GitOps Repository\nHelm charts + values]
-
-GR -->|ArgoCD watches repo| Argo[ArgoCD]
-
-%% EKS cluster and namespaces
-subgraph EKS["AWS EKS Cluster"]
-    subgraph DevNS["dev namespace"]
-        DevApp[Todo App\n1 pod, ClusterIP]
+```mermaid
+graph TD
+    A[Developer Workflow] -->|git push to main| B[GitHub Actions CI/CD]
+    
+    B --> C[Build Docker Image]
+    C --> D[Trivy Security Scan]
+    D --> E[Push to AWS ECR]
+    E --> F[Update GitOps Repo]
+    
+    F --> G[GitOps Repository<br/>Helm Charts + Values]
+    
+    G -->|ArgoCD watches| H[ArgoCD Controller]
+    
+    H -->|Auto-sync| I[Dev Environment<br/>1 pod - ClusterIP]
+    H -->|Auto-sync| J[Staging Environment<br/>2 pods - LoadBalancer]
+    H -->|Manual sync| K[Production Environment<br/>3+ pods - LoadBalancer]
+    
+    subgraph AWS EKS Cluster
+        I
+        J
+        K
     end
     
-    subgraph StagingNS["staging namespace"]
-        StgApp[Todo App\n2 pods, LoadBalancer]
-    end
-    
-    subgraph ProdNS["prod namespace"]
-        ProdApp[Todo App\n3+ pods, LoadBalancer]
-    end
-end
+    style B fill:#2088FF,stroke:#0366d6,stroke-width:2px,color:#fff
+    style H fill:#EF7B4D,stroke:#E85D2A,stroke-width:2px,color:#fff
+    style I fill:#00C853,stroke:#00A344,stroke-width:2px,color:#fff
+    style J fill:#FFB300,stroke:#FF8F00,stroke-width:2px,color:#fff
+    style K fill:#D32F2F,stroke:#B71C1C,stroke-width:2px,color:#fff
+```
 
-Argo -->|Auto-sync| DevNS
-Argo -->|Auto-sync| StagingNS
-Argo -->|Manual sync| ProdNS
+**Workflow:**
+1. Developer pushes code to `main` branch
+2. GitHub Actions builds, scans, and pushes Docker image to ECR
+3. Pipeline updates `values-dev.yaml` in GitOps repo
+4. ArgoCD detects change and auto-syncs dev environment
+5. Manual promotion to staging → production with Git commits
+6. ArgoCD pulls desired state and applies to Kubernetes cluster
 
-
-text
-
-ArgoCD runs inside the cluster and continuously pulls the desired state from the GitOps repo, keeping Kubernetes resources in sync with Git.[web:52][web:61]  
-
----
+**Key Components:**
+- **GitHub Actions**: CI/CD automation
+- **AWS ECR**: Private container registry  
+- **GitOps Repo**: Single source of truth for deployments
+- **ArgoCD**: GitOps controller running in EKS
+- **AWS EKS**: Managed Kubernetes cluster with 3 environments
 
 ## 🚀 Technology Stack
 
